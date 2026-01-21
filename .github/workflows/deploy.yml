@@ -20,7 +20,7 @@ jobs:
         script: |
           set -e
           echo "📥 Pulling latest code..."
-          cd ~/var/www/visualizer-backend
+          cd /var/www/visualizer-backend
           git pull origin main
           
           echo "🔧 Building backend..."
