@@ -20,3 +20,4 @@ CREATE TABLE IF NOT EXISTS `feedback` (
   INDEX `idx_rating` (`rating`) COMMENT 'Index on rating for statistics',
   INDEX `idx_created_at` (`created_at`) COMMENT 'Index on created_at for sorting and filtering by date'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='User feedback for SQL visualization tool';
+
