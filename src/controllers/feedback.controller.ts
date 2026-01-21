@@ -173,7 +173,7 @@ export class FeedbackController {
    * GET /api/feedback/stats
    * Get feedback statistics
    */
-  async getFeedbackStats(req: Request, res: Response, next: NextFunction): Promise<void> {
+  async getFeedbackStats(_req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const stats = await this.feedbackService.getFeedbackStats();
 
