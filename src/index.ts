@@ -130,39 +130,6 @@ async function startServer(): Promise<void> {
 ║  MySQL:      ${config.mysql.host}:${config.mysql.port}                         ║
 ║  Database:   ${config.mysql.database.padEnd(20)}                 ║
 ╚════════════════════════════════════════════════════════════╝
-
-📚 API Documentation:
-  Swagger UI:   http://localhost:${config.port}/api-docs
-  OpenAPI JSON: http://localhost:${config.port}/api-docs.json
-
-API Endpoints:
-  Sessions:
-    POST   /api/sessions              - Create new session
-    GET    /api/sessions              - List all sessions
-    GET    /api/sessions/:id          - Get session info
-    DELETE /api/sessions/:id          - Delete session
-  
-  SQL:
-    POST   /api/sql/execute           - Execute SQL statement
-    POST   /api/sql/execute-multiple  - Execute multiple statements
-    GET    /api/sql/tables/:sessionId - Get all tables with data
-    POST   /api/sql/visualize         - Visualize query execution
-
-  Feedback:
-    POST   /api/feedback              - Submit feedback
-    GET    /api/feedback              - Get all feedback (paginated)
-    GET    /api/feedback/stats        - Get feedback statistics
-    GET    /api/feedback/:id          - Get feedback by ID
-    GET    /api/feedback/session/:sid - Get feedback by session
-    GET    /api/feedback/email/:email - Get feedback by email
-    PUT    /api/feedback/:id          - Update feedback
-    DELETE /api/feedback/:id          - Delete feedback
-
-  Monitoring:
-    GET    /api/monitoring/database   - Database connection pool status
-    GET    /api/monitoring/feedback   - Feedback metrics and contacts
-    GET    /api/monitoring/status     - Combined system status
-
 Ready to accept connections...
 `);
     });
