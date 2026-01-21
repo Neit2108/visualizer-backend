@@ -1,0 +1,46 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 🚀 Deploy to VPS
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.VPS_HOST }}
+        username: ${{ secrets.VPS_USERNAME }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        port: 22
+        script: |
+          set -e
+          echo "📥 Pulling latest code..."
+          cd ~/var/www/visualizer-backend
+          git pull origin main
+          
+          echo "🔧 Building backend..."
+          npm install
+          npm run build
+          pm2 restart backend || pm2 start dist/index.js --name backend
+          
+          echo "🎨 Building frontend..."
+          cd ../visualizer-frontend
+          npm install
+          npm run build
+          sudo cp -r dist/* /var/www/dungtienne.id.vn/
+          
+          echo "✅ Deployment completed!"
+          pm2 status
+    
+    - name: ✅ Success notification
+      if: success()
+      run: echo "Deploy thành công! 🎉"
+    
+    - name: ❌ Failure notification
+      if: failure()
+      run: echo "Deploy thất bại! 😢"
