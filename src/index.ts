@@ -11,6 +11,7 @@ import { config, initializeDatabase, closePool } from './config/index.js';
 import { swaggerSpec } from './config/swagger.js';
 import { createAPIRouter } from './routes/index.js';
 import { SessionService } from './services/session.service.js';
+import { startSessionCleanupCronjob, stopSessionCleanupCronjob } from './services/session-cleanup.service.js';
 import { errorHandler, notFoundHandler, requestLogger } from './middleware/index.js';
 
 // Create Express app
@@ -79,6 +80,11 @@ app.get('/', (_req, res) => {
           update: 'PUT /api/feedback/:id',
           delete: 'DELETE /api/feedback/:id',
         },
+        monitoring: {
+          database: 'GET /api/monitoring/database',
+          feedback: 'GET /api/monitoring/feedback',
+          status: 'GET /api/monitoring/status',
+        },
       },
     },
   });
@@ -93,6 +99,7 @@ app.use(errorHandler);
 // Graceful shutdown
 const shutdown = async (): Promise<void> => {
   console.log('\nShutting down gracefully...');
+  stopSessionCleanupCronjob();
   await sessionService.destroy();
   await closePool();
   process.exit(0);
@@ -107,6 +114,9 @@ async function startServer(): Promise<void> {
     // Initialize MySQL connection pool
     console.log('Initializing MySQL connection...');
     await initializeDatabase();
+
+    // Start session cleanup cronjob (runs every 10 minutes)
+    startSessionCleanupCronjob(10);
     
     // Start server
     app.listen(config.port, () => {
@@ -147,6 +157,11 @@ API Endpoints:
     GET    /api/feedback/email/:email - Get feedback by email
     PUT    /api/feedback/:id          - Update feedback
     DELETE /api/feedback/:id          - Delete feedback
+
+  Monitoring:
+    GET    /api/monitoring/database   - Database connection pool status
+    GET    /api/monitoring/feedback   - Feedback metrics and contacts
+    GET    /api/monitoring/status     - Combined system status
 
 Ready to accept connections...
 `);

@@ -5,7 +5,7 @@
 
 import { randomUUID } from 'crypto';
 import type { PoolConnection } from 'mysql2/promise';
-import type { Session, CreateSessionResponse } from '../types/index.js';
+import type { Session, CreateSessionResponse, CreateSessionClientInfo } from '../types/index.js';
 import { SessionRepository } from '../repositories/session.repository.js';
 import { getSessionConnection } from '../config/database.js';
 import { SessionNotFoundError, InvalidSessionError } from '../utils/errors.js';
@@ -20,9 +20,9 @@ export class SessionService {
   /**
    * Create a new session
    */
-  async createSession(): Promise<CreateSessionResponse> {
+  async createSession(clientInfo?: CreateSessionClientInfo): Promise<CreateSessionResponse> {
     const sessionId = randomUUID();
-    await this.sessionRepository.createSession(sessionId);
+    await this.sessionRepository.createSession(sessionId, clientInfo);
 
     return { sessionId };
   }

@@ -244,3 +244,22 @@ export interface FeedbackStats {
   averageRating: number;
   categoryBreakdown: Record<string, number>;
 }
+
+// Sessions management types
+export interface CreateSessionManagementRequest {
+  sessionId: string;
+  schemaName: string;
+  createdAt: Date;
+  lastAccessedAt: Date;
+  expiresAt: Date;
+  status: 'active' | 'expired' | 'deleted';
+  clientIp: string;
+  userAgent: string;
+  queryCount: number;
+  tableCount: number;
+}
+
+export interface CreateSessionClientInfo {
+  clientIp?: string;
+  userAgent?: string;
+}

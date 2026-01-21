@@ -14,8 +14,11 @@ export class SessionController {
    * POST /api/sessions
    * Create a new session
    */
-  createSession = async (_req: Request, res: Response): Promise<void> => {
-    const result = await this.sessionService.createSession();
+  createSession = async (req: Request, res: Response): Promise<void> => {
+    const clientIp = req.ip ?? req.socket.remoteAddress ?? 'unknown';
+    const userAgent = req.headers['user-agent'] ?? 'unknown';
+
+    const result = await this.sessionService.createSession({ clientIp, userAgent });
 
     const response: ApiResponse<CreateSessionResponse> = {
       success: true,

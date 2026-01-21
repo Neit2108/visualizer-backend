@@ -16,6 +16,7 @@ import { SQLRepository } from '../repositories/sql.repository.js';
 import { SQLParserService } from './sql-parser.service.js';
 import { SQLVisualizationService } from './sql-visualization.service.js';
 import { ValidationError, SQLExecutionError } from '../utils/errors.js';
+import { updateSessionAccess } from '../config/database.js';
 
 export class SQLExecutionService {
   private parser: SQLParserService;
@@ -28,10 +29,24 @@ export class SQLExecutionService {
 
   /**
    * Execute SQL statement(s)
+   * @param connection - MySQL connection
+   * @param schemaName - Schema name for the session
+   * @param sql - SQL statement to execute
+   * @param skipAccessUpdate - Skip session access update (used when called from executeMultipleSQL)
    */
-  async executeSQL(connection: PoolConnection, schemaName: string, sql: string): Promise<ExecuteSQLResponse> {
+  async executeSQL(
+    connection: PoolConnection,
+    schemaName: string,
+    sql: string,
+    skipAccessUpdate: boolean = false
+  ): Promise<ExecuteSQLResponse> {
     if (!sql?.trim()) {
       throw new ValidationError('SQL statement is required');
+    }
+
+    // Update session access time and extend expiration by 30 minutes
+    if (!skipAccessUpdate) {
+      await updateSessionAccess(schemaName, 30);
     }
 
     const repository = new SQLRepository(connection, schemaName);
@@ -117,6 +132,9 @@ export class SQLExecutionService {
    * Execute multiple SQL statements
    */
   async executeMultipleSQL(connection: PoolConnection, schemaName: string, sqlStatements: string): Promise<ExecuteSQLResponse[]> {
+    // Update session access time and extend expiration by 30 minutes
+    await updateSessionAccess(schemaName, 30);
+
     // Split by semicolon but be careful with quoted strings
     const statements = this.splitStatements(sqlStatements);
     const results: ExecuteSQLResponse[] = [];
@@ -124,7 +142,8 @@ export class SQLExecutionService {
     for (const statement of statements) {
       if (statement.trim()) {
         try {
-          const result = await this.executeSQL(connection, schemaName, statement);
+          // Skip access update for individual statements since we already updated above
+          const result = await this.executeSQL(connection, schemaName, statement, true);
           results.push(result);
         } catch (error) {
           if (error instanceof Error) {

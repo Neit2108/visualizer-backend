@@ -4,6 +4,7 @@
 
 import mysql from 'mysql2/promise';
 import type { Pool, PoolConnection, ResultSetHeader } from 'mysql2/promise';
+import type { CreateSessionManagementRequest } from 'src/types/index.js';
 
 // MySQL Connection Pool Configuration
 const poolConfig: mysql.PoolOptions = {
@@ -87,6 +88,43 @@ export async function createSessionSchema(sessionId: string): Promise<string> {
 }
 
 /**
+ * Create a session management record
+ */
+export async function createSessionManagement(request: CreateSessionManagementRequest): Promise<void> {
+  const connection = await getPool().getConnection();
+  try {
+    // Insert the session management record into the sessions table in the main database
+    await connection.query(`INSERT INTO sessions (id, schema_name, created_at, last_accessed_at, expires_at, status, client_ip, user_agent, query_count, table_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [request.sessionId, request.schemaName, request.createdAt, request.lastAccessedAt, request.expiresAt, request.status, request.clientIp, request.userAgent, request.queryCount, request.tableCount]);
+  } finally {
+    connection.release();
+  }
+}
+
+/**
+ * Update session access time and extend expiration
+ * Called when SQL is executed on a session
+ * @param schemaName - The schema name of the session
+ * @param extendMinutes - Minutes to extend expiration (default: 30)
+ */
+export async function updateSessionAccess(schemaName: string, extendMinutes: number = 30): Promise<void> {
+  const connection = await getPool().getConnection();
+  try {
+    const now = new Date();
+    const newExpiresAt = new Date(now.getTime() + extendMinutes * 60 * 1000);
+
+    await connection.query(
+      `UPDATE sessions 
+       SET last_accessed_at = ?, 
+           expires_at = ? 
+       WHERE schema_name = ? AND status = 'active'`,
+      [now, newExpiresAt, schemaName]
+    );
+  } finally {
+    connection.release();
+  }
+}
+
+/**
  * Drop a session's schema (database)
  */
 export async function dropSessionSchema(sessionId: string): Promise<boolean> {
@@ -153,6 +191,80 @@ export async function closePool(): Promise<void> {
     await pool.end();
     pool = null;
     console.log('MySQL pool closed');
+  }
+}
+
+/**
+ * Get database connection pool statistics
+ */
+export interface PoolStatistics {
+  active: number;
+  idle: number;
+  waiting: number;
+  total: number;
+  limit: number;
+  utilization: number; // percentage
+}
+
+export function getPoolStatistics(): PoolStatistics | null {
+  if (!pool) {
+    return null;
+  }
+
+  // MySQL2 pool doesn't expose these directly, so we need to estimate
+  // The pool object has internal state we can't access directly
+  // We'll use a test connection approach to get approximate stats
+  const limit = poolConfig.connectionLimit;
+  
+  // Note: MySQL2 doesn't expose active/idle/waiting counts directly
+  // We'll return what we can determine from the config
+  // For more accurate stats, we'd need to track connections manually
+  return {
+    active: 0, // Cannot be determined without tracking
+    idle: 0, // Cannot be determined without tracking
+    waiting: 0, // Cannot be determined without tracking
+    total: 0, // Cannot be determined without tracking
+    limit: limit ?? 10,
+    utilization: 0, // Will be calculated when we test connectivity
+  };
+}
+
+/**
+ * Test database connectivity and measure response time
+ */
+export async function testDatabaseConnection(): Promise<{
+  connected: boolean;
+  responseTime: number;
+  error?: string;
+}> {
+  const startTime = Date.now();
+  
+  try {
+    if (!pool) {
+      return {
+        connected: false,
+        responseTime: Date.now() - startTime,
+        error: 'Pool not initialized',
+      };
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.query('SELECT 1');
+      const responseTime = Date.now() - startTime;
+      return {
+        connected: true,
+        responseTime,
+      };
+    } finally {
+      connection.release();
+    }
+  } catch (error) {
+    return {
+      connected: false,
+      responseTime: Date.now() - startTime,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    };
   }
 }
 

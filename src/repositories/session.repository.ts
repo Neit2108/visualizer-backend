@@ -3,9 +3,10 @@
 // Manages session storage and lifecycle with MySQL
 // ==========================================
 
-import type { Session } from '../types/index.js';
+import type { Session, CreateSessionClientInfo } from '../types/index.js';
 import {
   createSessionSchema,
+  createSessionManagement,
   dropSessionSchema,
 } from '../config/database.js';
 
@@ -28,8 +29,10 @@ export class SessionRepository {
   /**
    * Create a new session with a MySQL schema
    */
-  async createSession(sessionId: string): Promise<Session> {
+  async createSession(sessionId: string, clientInfo?: CreateSessionClientInfo): Promise<Session> {
     const now = new Date();
+    const expiresAt = new Date(now.getTime() + this.sessionTimeoutMs);
+
     const session: Session = {
       id: sessionId,
       createdAt: now,
@@ -38,6 +41,20 @@ export class SessionRepository {
 
     // Create a dedicated schema for this session
     const schemaName = await createSessionSchema(sessionId);
+
+    // Insert session record into the main database's sessions table
+    await createSessionManagement({
+      sessionId,
+      schemaName,
+      createdAt: now,
+      lastAccessedAt: now,
+      expiresAt,
+      status: 'active',
+      clientIp: clientInfo?.clientIp ?? 'unknown',
+      userAgent: clientInfo?.userAgent ?? 'unknown',
+      queryCount: 0,
+      tableCount: 0,
+    });
 
     this.sessions.set(sessionId, { session, schemaName });
 
