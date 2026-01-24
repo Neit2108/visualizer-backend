@@ -93,6 +93,9 @@ export async function createSessionSchema(sessionId: string): Promise<string> {
 export async function createSessionManagement(request: CreateSessionManagementRequest): Promise<void> {
   const connection = await getPool().getConnection();
   try {
+    // Ensure we're using the main database (in case connection was previously used for a session database)
+    await connection.query(`USE \`${poolConfig.database}\``);
+    
     // Insert the session management record into the sessions table in the main database
     await connection.query(`INSERT INTO sessions (id, schema_name, created_at, last_accessed_at, expires_at, status, client_ip, user_agent, query_count, table_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [request.sessionId, request.schemaName, request.createdAt, request.lastAccessedAt, request.expiresAt, request.status, request.clientIp, request.userAgent, request.queryCount, request.tableCount]);
   } finally {
@@ -109,6 +112,9 @@ export async function createSessionManagement(request: CreateSessionManagementRe
 export async function updateSessionAccess(schemaName: string, extendMinutes: number = 30): Promise<void> {
   const connection = await getPool().getConnection();
   try {
+    // Ensure we're using the main database
+    await connection.query(`USE \`${poolConfig.database}\``);
+    
     const now = new Date();
     const newExpiresAt = new Date(now.getTime() + extendMinutes * 60 * 1000);
 
